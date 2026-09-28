@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BITS course dashboard</title>
+  <style>
+    :root {
+      --ink: #1c1915;
+      --muted: #5c564c;
+      --paper: #f3efe6;
+      --card: #fffdf8;
+      --line: #ddd4c4;
+      --teal: #0f4c5c;
+      --teal-soft: #e5f0f2;
+      --clash: #8c2f39;
+      --clash-soft: #f8ecec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 16px/1.45 "Segoe UI", sans-serif;
+    }
+    header.top {
+      padding: 1.25rem 1.5rem 0.5rem;
+    }
+    header.top h1 {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    header.top p { margin: 0.35rem 0 0; color: var(--muted); max-width: 42rem; }
+    main {
+      display: grid;
+      grid-template-columns: minmax(16rem, 22rem) 1fr;
+      gap: 1rem;
+      padding: 1rem 1.5rem 2rem;
+    }
+    form, .panel, .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    form, .panel { padding: 1rem; }
+    label { display: block; margin: 0.7rem 0 0.25rem; font-size: 0.82rem; color: var(--muted); }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.45rem 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    textarea { min-height: 4.2rem; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    button {
+      margin-top: 0.9rem;
+      border: 0;
+      border-radius: 8px;
+      padding: 0.55rem 0.8rem;
+      background: var(--teal);
+      color: white;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.secondary { background: transparent; color: var(--teal); border: 1px solid var(--teal); }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .query {
+      display: flex;
+      gap: 0.6rem;
+      align-items: end;
+    }
+    .query label { flex: 1; }
+    .query button { margin-top: 0; }
+    .status, .warnings { color: var(--muted); font-size: 0.92rem; }
+    .warnings { color: var(--clash); }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0; }
+    .chip {
+      background: var(--teal-soft);
+      border-radius: 999px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.82rem;
+    }
+    .feed { display: grid; gap: 0.7rem; margin-top: 0.8rem; }
+    .card { padding: 0.85rem 1rem; }
+    .card header { display: flex; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
+    .code { font-family: ui-monospace, monospace; font-size: 1rem; }
+    .title { font-weight: 600; }
+    .meta { color: var(--muted); font-size: 0.85rem; }
+    .badges { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.4rem 0; }
+    .badge { font-size: 0.75rem; letter-spacing: 0.03em; border: 1px solid var(--line); border-radius: 999px; padding: 0.1rem 0.45rem; }
+    ul.cites { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+    .explain { margin: 0.45rem 0 0; }
+    .unverified-card { background: var(--clash-soft); }
+    h2 { font-family: Georgia, serif; font-size: 1.15rem; margin: 1.2rem 0 0.4rem; }
+    .section-result { margin-top: 0.6rem; font-size: 0.92rem; }
+    .menu { position: relative; }
+    .menu-button {
+      width: 100%;
+      margin-top: 0;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      text-align: left;
+    }
+    .menu-panel {
+      position: absolute;
+      z-index: 4;
+      left: 0;
+      right: 0;
+      max-height: 8.5rem;
+      overflow-y: scroll;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .menu-panel button {
+      display: block;
+      width: 100%;
+      margin: 0;
+      background: #fff;
+      color: var(--ink);
+      border: 0;
+      border-radius: 0;
+      text-align: left;
+    }
+    .menu-panel button:hover { background: var(--teal-soft); }
+    .clash { color: var(--clash); }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .actions button { margin-top: 0.45rem; }
+    .check { display: flex; gap: 0.45rem; align-items: flex-start; margin: 0.3rem 0; }
+    .check input { width: auto; margin-top: 0.2rem; }
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; padding: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>Course dashboard</h1>
+    <p>Recommendations come from the processed bulletin, handouts, and timetable. A preference is cited only when a stored field states it. If a requested property was not extracted, the course stays unverified.</p>
+  </header>
+  <main>
+    <form id="profile-form">
+      <div class="row">
+        <div>
+          <label for="campus-button">Campus</label>
+          <div class="menu">
+            <button type="button" class="menu-button" id="campus-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="campus-list">pilani</button>
+            <div id="campus-list" class="menu-panel" role="listbox" hidden></div>
+          </div>
+          <input type="hidden" id="campus" value="pilani">
+        </div>
+        <div>
+          <label for="admission-year">Admission year</label>
+          <input id="admission-year" type="number" value="2024" min="2000" max="2035">
+        </div>
+      </div>
+      <label for="degree-button">Degree</label>
+      <div class="menu">
+        <button type="button" class="menu-button" id="degree-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="degree-list">Degree</button>
+        <div id="degree-list" class="menu-panel" role="listbox" hidden></div>
+      </div>
+      <input type="hidden" id="degree" value="">
+      <label for="dual-degree-button">Dual degree</label>
+      <div class="menu">
+        <button type="button" class="menu-button" id="dual-degree-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="dual-degree-list">None</button>
+        <div id="dual-degree-list" class="menu-panel" role="listbox" hidden></div>
+      </div>
+      <input type="hidden" id="dual-degree" value="">
+      <div class="row">
+        <div>
+          <label for="semester">Semester</label>
+          <input id="semester" type="number" value="5" min="1">
+        </div>
+        <div>
+          <label for="minor-button">Minor</label>
+          <div class="menu">
+            <button type="button" class="menu-button" id="minor-button" aria-haspopup="listbox" aria-expanded="false" aria-controls="minor-list">None</button>
+            <div id="minor-list" class="menu-panel" role="listbox" hidden></div>
+          </div>
+          <input type="hidden" id="minor" value="">
+        </div>
+      </div>
+      <p class="meta">Semester does not mark courses complete. Chart rows and pasted transcripts stay suggestions until you add the codes you confirm.</p>
+      <label for="completed">Completed courses</label>
+      <textarea id="completed" placeholder="CS F211"></textarea>
+      <div class="actions">
+        <button type="button" class="secondary" id="suggest-completed">Suggest earlier chart courses</button>
+        <button type="button" class="secondary" id="save-profile">Save on this browser</button>
+        <button type="button" class="secondary" id="load-saved">Load saved</button>
+      </div>
+      <label for="transcript">Pasted transcript</label>
+      <textarea id="transcript" placeholder="Paste ERP text. Nothing is saved until you confirm the codes."></textarea>
+      <button type="button" class="secondary" id="read-transcript">Review pasted codes</button>
+      <div id="confirm-courses" class="section-result"></div>
+      <label for="current">Current courses</label>
+      <textarea id="current" placeholder="One code per line"></textarea>
+      <label for="interests">Interests</label>
+      <textarea id="interests" placeholder="machine learning"></textarea>
+      <button type="submit" id="update">Update recommendations</button>
+      <button type="button" class="secondary" id="load-example">Load example profile</button>
+
+      <h2>Section check</h2>
+      <p class="meta">Held sections are also used when the feed chooses a section.</p>
+      <label for="section-course">Course to add</label>
+      <input id="section-course" placeholder="AN F314">
+      <label for="held-sections">Sections already held</label>
+      <textarea id="held-sections" placeholder="CHEM F111 L1"></textarea>
+      <button type="button" id="check-sections">Check sections</button>
+      <div id="section-result" class="section-result" aria-live="polite"></div>
+    </form>
+
+    <section class="panel">
+      <div class="query">
+        <label>Preference
+          <input id="query" placeholder="Suggest an AI-related DEL with no midsem">
+        </label>
+        <button type="button" id="query-update">Update</button>
+      </div>
+      <div id="warnings" class="warnings"></div>
+      <div id="status" class="status"></div>
+      <div id="requirements" class="chips"></div>
+      <h2>Why this course</h2>
+      <div class="query">
+        <label>Course code
+          <input id="explain-course" placeholder="CS F111">
+        </label>
+        <button type="button" class="secondary" id="explain">Explain</button>
+      </div>
+      <div id="explain-result" class="section-result"></div>
+      <h2>Remaining named courses</h2>
+      <button type="button" class="secondary" id="plan">Draft a prerequisite order</button>
+      <div id="plan-result" class="section-result"></div>
+      <h2>Shortlist</h2>
+      <div id="shortlist" class="chips"></div>
+      <div class="actions">
+        <button type="button" class="secondary" id="compare">Compare</button>
+        <button type="button" class="secondary" id="combine">Build a clash-free timetable</button>
+      </div>
+      <div id="compare-result" class="section-result"></div>
+      <h2>Matches</h2>
+      <div id="feed" class="feed" aria-live="polite"></div>
+      <button type="button" class="secondary" id="more-matches" hidden>Show more matches</button>
+      <h2>Unverified</h2>
+      <div id="unverified" class="feed"></div>
+      <button type="button" class="secondary" id="more-unverified" hidden>Show more unverified</button>
+      <h2>Sources</h2>
+      <div id="freshness" class="meta"></div>
+    </section>
+  </main>
+  <script>
+    const state = { offset: 0, unverifiedOffset: 0, limit: 12, started: false, shortlist: [] };
+
+    function text(id) { return document.getElementById(id).value.trim(); }
+    function compactName(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+    }
+    function chooseOption(id, wanted) {
+      const target = compactName(wanted);
+      const match = [...document.querySelectorAll("#" + id + "-list button")].find((option) => compactName(option.dataset.value) === target);
+      const input = document.getElementById(id);
+      const button = document.getElementById(id + "-button");
+      if (!match) {
+        if (!wanted) {
+          input.value = "";
+          button.textContent = "None";
+        }
+        return;
+      }
+      input.value = match.dataset.value;
+      button.textContent = match.textContent;
+    }
+    function fillMenu(id, values, blank) {
+      const list = document.getElementById(id + "-list");
+      const input = document.getElementById(id);
+      const button = document.getElementById(id + "-button");
+      clear(list);
+      const labels = blank ? [blank, ...values] : values;
+      labels.forEach((label) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.textContent = label;
+        option.dataset.value = blank && label === blank ? "" : label;
+        option.addEventListener("click", () => {
+          input.value = option.dataset.value;
+          button.textContent = label;
+          closeMenus();
+        });
+        list.append(option);
+      });
+    }
+    function closeMenus() {
+      document.querySelectorAll(".menu-panel").forEach((list) => {
+        list.hidden = true;
+        const button = document.getElementById(list.id.replace(/-list$/, "-button"));
+        if (button) button.setAttribute("aria-expanded", "false");
+      });
+    }
+    function toggleMenu(id) {
+      const list = document.getElementById(id + "-list");
+      const willOpen = list.hidden;
+      closeMenus();
+      list.hidden = !willOpen;
+      document.getElementById(id + "-button").setAttribute("aria-expanded", String(willOpen));
+    }
+    async function loadOptions() {
+      const response = await fetch("/api/options");
+      const data = await response.json();
+      fillMenu("degree", data.degrees || []);
+      fillMenu("dual-degree", data.dual_degrees || [], "None");
+      fillMenu("minor", data.minors || [], "None");
+      chooseOption("degree", "B.E. Computer Science");
+    }
+    ["campus", "degree", "dual-degree", "minor"].forEach((id) => {
+      document.getElementById(id + "-button").addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleMenu(id);
+      });
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".menu")) closeMenus();
+    });
+    function list(id) {
+      return text(id).split(/[\n,;]+/).map((item) => item.trim()).filter(Boolean);
+    }
+    function profile() {
+      return {
+        campus: text("campus"),
+        admission_year: Number(text("admission-year")),
+        degree: text("degree"),
+        dual_degree: text("dual-degree") || null,
+        current_semester: Number(text("semester")),
+        completed_courses: list("completed"),
+        current_courses: list("current"),
+        minor: text("minor") || null,
+        interests: list("interests"),
+      };
+    }
+    function heldSections() {
+      return list("held-sections").map((line) => {
+        const match = line.toUpperCase().match(/^([A-Z]{2,6}\s+[A-Z]\d{3}[A-Z0-9-]*)\s+([LTP]\d{1,2}[A-Z]{0,4})$/);
+        if (!match) return null;
+        return { course_code: match[1].replace(/\s+/, " "), section: match[2] };
+      }).filter(Boolean);
+    }
+
+    function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+    function el(tag, className, value) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (value != null) node.textContent = value;
+      return node;
+    }
+
+    function card(course, unverified) {
+      const article = el("article", unverified ? "card unverified-card" : "card");
+      const header = document.createElement("header");
+      header.append(el("span", "code", course.course_code));
+      header.append(el("span", "title", course.title || "Title not stored"));
+      if (course.units != null) header.append(el("span", "meta", course.units + " units"));
+      article.append(header);
+      const badges = el("div", "badges");
+      (course.satisfies || []).forEach((item) => badges.append(el("span", "badge", item)));
+      if (course.prerequisite_status) badges.append(el("span", "badge", course.prerequisite_status));
+      badges.append(el("span", "badge", course.offered_this_semester ? "offered this semester" : "not on this timetable"));
+      article.append(badges);
+      const cites = el("ul", "cites");
+      (course.matched_properties || []).forEach((prop) => {
+        (prop.citations || []).forEach((citation) => {
+          cites.append(el("li", null, prop.property + " is " + citation.value + " in " + citation.source_file));
+        });
+      });
+      (course.interest_matches || []).forEach((hit) => {
+        cites.append(el("li", null, hit.term + " in " + hit.source + " " + hit.field + ": " + hit.excerpt));
+      });
+      (course.unverified_properties || []).forEach((item) => {
+        cites.append(el("li", null, (item.property || "field") + ": " + item.reason));
+      });
+      if (cites.childNodes.length) article.append(cites);
+      if (course.explanation) article.append(el("p", "explain", course.explanation));
+      if (course.section && course.section.section) {
+        const when = course.section.days_hours_raw ? " · " + course.section.days_hours_raw : "";
+        article.append(el("p", "meta", "Section " + course.section.section + when));
+      }
+      const keep = el("button", "secondary", state.shortlist.includes(course.course_code) ? "On shortlist" : "Shortlist");
+      keep.addEventListener("click", () => {
+        if (!state.shortlist.includes(course.course_code)) state.shortlist.push(course.course_code);
+        renderShortlist();
+        keep.textContent = "On shortlist";
+      });
+      article.append(keep);
+      return article;
+    }
+
+    function renderShortlist() {
+      const node = document.getElementById("shortlist");
+      clear(node);
+      if (!state.shortlist.length) {
+        node.append(el("span", "meta", "No courses shortlisted."));
+        return;
+      }
+      state.shortlist.forEach((code) => {
+        const chip = el("span", "chip", code);
+        chip.addEventListener("click", () => {
+          state.shortlist = state.shortlist.filter((item) => item !== code);
+          renderShortlist();
+        });
+        node.append(chip);
+      });
+    }
+
+    function addCompleted(codes) {
+      const current = new Set(list("completed"));
+      codes.forEach((code) => current.add(code));
+      document.getElementById("completed").value = [...current].join("\n");
+    }
+
+    function confirmationList(target, rows, warning) {
+      clear(target);
+      if (warning) target.append(el("p", "meta", warning));
+      if (!rows.length) {
+        target.append(el("p", null, "Nothing to confirm."));
+        return;
+      }
+      rows.forEach((row) => {
+        const line = el("label", "check");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = row.preselected !== false;
+        box.dataset.code = row.course_code;
+        const detail = row.chart_semester ? " · chart semester " + row.chart_semester : "";
+        const note = row.note ? " · " + row.note : "";
+        line.append(box, document.createTextNode(row.course_code + (row.title ? " · " + row.title : "") + detail + note));
+        target.append(line);
+      });
+      const add = el("button", null, "Add selected to completed");
+      add.type = "button";
+      add.addEventListener("click", () => {
+        const selected = [...target.querySelectorAll("input[type=checkbox]:checked")].map((box) => box.dataset.code);
+        addCompleted(selected);
+        target.append(el("p", "meta", selected.length + " codes added. Update recommendations to use them."));
+      });
+      target.append(add);
+    }
+
+    async function postJson(path, body) {
+      const response = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Request failed.");
+      return data;
+    }
+
+    function render(data, mode) {
+      const warnings = document.getElementById("warnings");
+      const status = document.getElementById("status");
+      const requirements = document.getElementById("requirements");
+      const feed = document.getElementById("feed");
+      const unverified = document.getElementById("unverified");
+      if (!mode) {
+        clear(warnings);
+        clear(requirements);
+        clear(feed);
+        clear(unverified);
+      }
+      const notes = []
+        .concat(data.academic_warnings || [])
+        .concat(data.preference_warnings || []);
+      if (!mode) notes.forEach((note) => warnings.append(el("div", null, note)));
+      const cap = data.registration_cap;
+      status.textContent = [
+        data.eligible_count + " eligible",
+        data.recommendation_count + " matched",
+        data.unverified_count + " unverified",
+        data.not_matched_count + " not matched",
+        cap && cap.max_units != null ? "registration cap " + cap.max_units + " (" + cap.clause + ")" : "",
+      ].filter(Boolean).join(" · ");
+      if (!mode) {
+        (data.requirements || []).forEach((row) => {
+          if (row.remaining_courses == null && row.remaining_units == null && row.required_units_min == null) return;
+          const bits = [row.category, row.programme];
+          if (row.remaining_courses != null) bits.push(row.remaining_courses + " courses left");
+          if (row.remaining_units != null) bits.push(row.remaining_units + " units left");
+          else if (row.units_raw) bits.push(row.units_raw);
+          const chip = el("span", "chip", bits.join(" · "));
+          if (row.source_section) chip.title = row.source_section;
+          requirements.append(chip);
+        });
+      }
+      if (mode !== "unverified") {
+        (data.recommendations || []).forEach((course) => feed.append(card(course, false)));
+      }
+      if (mode !== "matches") {
+        (data.unverified || []).forEach((course) => unverified.append(card(course, true)));
+      }
+      document.getElementById("more-matches").hidden = state.offset + data.recommendations.length >= data.recommendation_count;
+      document.getElementById("more-unverified").hidden = state.unverifiedOffset + data.unverified.length >= data.unverified_count;
+    }
+
+    async function loadFeed(mode) {
+      const button = document.getElementById("update");
+      button.disabled = true;
+      document.getElementById("status").textContent = "Reading the database…";
+      try {
+        const response = await fetch("/api/feed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile: profile(),
+            query: text("query"),
+            held_sections: heldSections(),
+            limit: state.limit,
+            offset: state.offset,
+            unverified_offset: state.unverifiedOffset,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "The dashboard could not build a feed.");
+        state.started = true;
+        render(data, mode);
+      } catch (error) {
+        document.getElementById("status").textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document.getElementById("profile-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      state.offset = 0;
+      state.unverifiedOffset = 0;
+      loadFeed(null);
+    });
+    document.getElementById("query-update").addEventListener("click", () => {
+      state.offset = 0;
+      state.unverifiedOffset = 0;
+      loadFeed(null);
+    });
+    let timer = 0;
+    document.getElementById("query").addEventListener("input", () => {
+      if (!state.started) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        state.offset = 0;
+        state.unverifiedOffset = 0;
+        loadFeed(null);
+      }, 400);
+    });
+    document.getElementById("more-matches").addEventListener("click", () => {
+      state.offset += state.limit;
+      loadFeed("matches");
+    });
+    document.getElementById("more-unverified").addEventListener("click", () => {
+      state.unverifiedOffset += state.limit;
+      loadFeed("unverified");
+    });
+    document.getElementById("load-example").addEventListener("click", async () => {
+      const response = await fetch("/api/example");
+      const example = await response.json();
+      chooseOption("campus", example.campus || "pilani");
+      document.getElementById("admission-year").value = example.admission_year || 2024;
+      chooseOption("degree", example.degree || "");
+      chooseOption("dual-degree", example.dual_degree || "");
+      document.getElementById("semester").value = example.current_semester || 1;
+      chooseOption("minor", example.minor || "");
+      document.getElementById("completed").value = (example.completed_courses || []).join("\n");
+      document.getElementById("current").value = (example.current_courses || []).join("\n");
+      document.getElementById("interests").value = (example.interests || []).join("\n");
+    });
+    fillMenu("campus", ["pilani", "goa", "hyderabad", "dubai"]);
+    chooseOption("campus", "pilani");
+    loadOptions();
+    document.getElementById("check-sections").addEventListener("click", async () => {
+      const target = document.getElementById("section-result");
+      target.textContent = "Checking the timetable…";
+      const response = await fetch("/api/sections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ course_code: text("section-course"), held_sections: heldSections() }),
+      });
+      const data = await response.json();
+      clear(target);
+      if (!response.ok) {
+        target.textContent = data.error || "Section check failed.";
+        return;
+      }
+      (data.warnings || []).forEach((note) => target.append(el("div", null, note)));
+      const line = (label, rows) => {
+        const names = rows.map((row) => row.section + (row.clashes && row.clashes.length ? " (" + row.clashes.map((clash) => clash.type + (clash.day ? " " + clash.day + " " + clash.hour : clash.date ? " " + clash.date + " " + clash.session : "")).join(", ") + ")" : "")).join(", ");
+        target.append(el("div", label === "Clashing" ? "clash" : null, label + ": " + (names || "none")));
+      };
+      line("Feasible", data.feasible || []);
+      line("Clashing", data.clashing || []);
+      line("Unverified", data.unverified || []);
+      target.append(el("div", null, "Cancelled: " + (data.cancelled || []).length));
+    });
+    document.getElementById("suggest-completed").addEventListener("click", async () => {
+      const target = document.getElementById("confirm-courses");
+      target.textContent = "Reading the semester chart…";
+      try {
+        const data = await postJson("/api/suggest-completed", { profile: profile() });
+        const rows = (data.suggested || []).map((row) => ({ ...row, preselected: false }));
+        const extra = data.skipped_without_position
+          ? " " + data.skipped_without_position + " chart rows had no year, so they were not suggested."
+          : "";
+        confirmationList(target, rows, (data.warning || "") + extra);
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("read-transcript").addEventListener("click", async () => {
+      const target = document.getElementById("confirm-courses");
+      target.textContent = "Reading codes…";
+      try {
+        const data = await postJson("/api/transcript", { text: document.getElementById("transcript").value });
+        confirmationList(target, data.courses || [], data.warning);
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("explain").addEventListener("click", async () => {
+      const target = document.getElementById("explain-result");
+      target.textContent = "Checking eligibility…";
+      try {
+        const data = await postJson("/api/explain", { profile: profile(), course_code: text("explain-course") });
+        clear(target);
+        target.append(el("p", null, data.course_code + " · " + data.status));
+        if (data.reason) target.append(el("p", null, data.reason));
+        (data.reasons || []).forEach((reason) => target.append(el("p", null, reason)));
+        if (data.prerequisite_text) target.append(el("p", "meta", data.prerequisite_text));
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("plan").addEventListener("click", async () => {
+      const target = document.getElementById("plan-result");
+      target.textContent = "Ordering unfinished named courses…";
+      try {
+        const data = await postJson("/api/plan", { profile: profile() });
+        clear(target);
+        target.append(el("p", "meta", data.note));
+        (data.terms || []).forEach((term) => {
+          const codes = term.courses.map((course) => course.course_code + " (" + course.units + ")").join(", ");
+          target.append(el("p", null, "Term " + term.term + " · " + term.units + " units · " + codes));
+        });
+        (data.open_pools || []).forEach((pool) => {
+          const left = [];
+          if (pool.remaining_courses != null) left.push(pool.remaining_courses + " courses");
+          if (pool.remaining_units != null) left.push(pool.remaining_units + " units");
+          target.append(el("p", null, pool.category + " still open: " + left.join(", ")));
+        });
+        (data.blocked || []).slice(0, 8).forEach((item) => target.append(el("p", "clash", item.course_code + ": " + item.reason)));
+        (data.unverified || []).slice(0, 8).forEach((item) => target.append(el("p", "meta", item.course_code + ": " + item.reason)));
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("compare").addEventListener("click", async () => {
+      const target = document.getElementById("compare-result");
+      target.textContent = "Reading stored fields…";
+      try {
+        const data = await postJson("/api/compare", { profile: profile(), course_codes: state.shortlist });
+        clear(target);
+        target.append(el("p", "meta", data.note));
+        (data.courses || []).forEach((course) => {
+          const card = el("article", "card");
+          card.append(el("p", "code", course.course_code + (course.title ? " · " + course.title : "")));
+          if (!course.known) {
+            card.append(el("p", null, course.reason));
+          } else {
+            card.append(el("p", "meta", "Units: " + (course.units == null ? "not stored" : course.units)));
+            card.append(el("p", "meta", "Prerequisites: " + (course.prerequisites_text || (course.description_present ? "none printed" : "not stored"))));
+            const handout = course.handout;
+            if (!handout) card.append(el("p", "meta", "No handout for this campus."));
+            else {
+              card.append(el("p", "meta", "Handout " + handout.source_file));
+              card.append(el("p", "meta", "Midsem: " + flag(handout.has_midsem) + " · project: " + flag(handout.has_project) + " · attendance: " + (handout.attendance_status || "not stored")));
+              card.append(el("p", "meta", "Makeup: " + (handout.makeup_policy || "not stored")));
+            }
+            const sections = (course.sections || []).filter((row) => !row.cancelled).slice(0, 4);
+            card.append(el("p", "meta", sections.length ? sections.map((row) => row.section + " " + (row.days_hours_raw || "time not stored")).join(" · ") : "No timetable rows."));
+          }
+          target.append(card);
+        });
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("combine").addEventListener("click", async () => {
+      const target = document.getElementById("compare-result");
+      target.textContent = "Searching clash-free sections…";
+      try {
+        const data = await postJson("/api/combine", {
+          profile: profile(),
+          course_codes: state.shortlist,
+          held_sections: heldSections(),
+          query: text("query"),
+        });
+        clear(target);
+        if (data.warning) target.append(el("p", "meta", data.warning));
+        (data.chosen || []).forEach((row) => {
+          target.append(el("p", null, row.course_code + " " + row.section + (row.days_hours_raw ? " · " + row.days_hours_raw : "")));
+        });
+        (data.unplaced || []).forEach((row) => target.append(el("p", "clash", row.course_code + ": " + row.reason)));
+      } catch (error) {
+        target.textContent = error.message;
+      }
+    });
+    document.getElementById("save-profile").addEventListener("click", () => {
+      const saved = {
+        profile: profile(),
+        query: text("query"),
+        held: document.getElementById("held-sections").value,
+        shortlist: state.shortlist,
+      };
+      localStorage.setItem("bitsrec-profile", JSON.stringify(saved));
+      document.getElementById("confirm-courses").textContent = "Profile saved in this browser.";
+    });
+    document.getElementById("load-saved").addEventListener("click", () => {
+      const raw = localStorage.getItem("bitsrec-profile");
+      if (!raw) {
+        document.getElementById("confirm-courses").textContent = "No saved profile in this browser.";
+        return;
+      }
+      const saved = JSON.parse(raw);
+      const item = saved.profile || {};
+      chooseOption("campus", item.campus || "pilani");
+      document.getElementById("admission-year").value = item.admission_year || 2024;
+      chooseOption("degree", item.degree || "");
+      chooseOption("dual-degree", item.dual_degree || "");
+      document.getElementById("semester").value = item.current_semester || 1;
+      chooseOption("minor", item.minor || "");
+      document.getElementById("completed").value = (item.completed_courses || []).join("\n");
+      document.getElementById("current").value = (item.current_courses || []).join("\n");
+      document.getElementById("interests").value = (item.interests || []).join("\n");
+      document.getElementById("query").value = saved.query || "";
+      document.getElementById("held-sections").value = saved.held || "";
+      state.shortlist = saved.shortlist || [];
+      renderShortlist();
+    });
+    function flag(value) {
+      if (value == null) return "not stored";
+      return value ? "yes" : "no";
+    }
+    renderShortlist();
+    fetch("/api/freshness").then((response) => response.json()).then((data) => {
+      const node = document.getElementById("freshness");
+      clear(node);
+      (data.documents || []).forEach((item) => {
+        node.append(el("div", null, item.present ? item.document + " · " + item.modified : item.document + " · missing"));
+      });
+      node.append(el("div", null, (data.handout_pdfs || 0) + " handout PDFs. " + (data.note || "")));
+    });
+  </script>
+</body>
+</html>

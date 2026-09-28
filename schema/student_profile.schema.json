@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bitsrec.student_profile",
+  "title": "Student profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["campus", "admission_year", "degree", "current_semester"],
+  "properties": {
+    "campus": {
+      "type": "string",
+      "description": "BITS campus. Expected values come from the timetable and handouts, such as pilani, goa, hyderabad, or dubai."
+    },
+    "admission_year": {"type": "integer"},
+    "degree": {"type": "string"},
+    "dual_degree": {"type": ["string", "null"]},
+    "current_semester": {"type": "integer", "minimum": 1},
+    "completed_courses": {
+      "type": "array",
+      "items": {"type": "string", "description": "Normalized course code, for example CS F211."}
+    },
+    "current_courses": {"type": "array", "items": {"type": "string"}},
+    "minor": {"type": ["string", "null"]},
+    "interests": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.mypy_cache/
+
+# Supplied source archive and extracted PDFs are large and regenerable inputs.
+dataset.zip
+data/raw/*
+!data/raw/.gitkeep
+
+# Built dataset. Recreate with: python -m bitsrec.ingest.run
+data/processed/*
+!data/processed/.gitkeep
